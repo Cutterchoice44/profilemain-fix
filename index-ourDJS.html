@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cutters Choice DJs</title>
+
+  <!-- Bebas Neue font -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── VARIABLES & RESET ────────────────────────────────────────────────── */
+    :root {
+      --brand-teal: #5A8785;
+      --bg-dark: #000;
+      --text-light: #fafafa;
+      --gap: 1rem;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: var(--bg-dark);
+      color: var(--text-light);
+      font-family: Arial, sans-serif;
+      line-height: 1.4;
+    }
+
+    /* ─── HEADER ───────────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: url('https://i.imgur.com/JHiiSW4.png') center/cover no-repeat;
+      border-bottom: 5px solid var(--brand-teal);
+      padding: 0.5rem 0.8rem;
+    }
+    header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      color: #fff;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    header img.logo {
+      width: 50px;
+      height: auto;
+    }
+
+    /* ─── GRID BREAKPOINTS ─────────────────────────────────────────────────── */
+    #artists-container {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: var(--gap);
+      padding: var(--gap);
+      width: 100%;
+    }
+    @media (max-width: 1200px) {
+      #artists-container { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 900px) {
+      #artists-container { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ─── CARD STYLES ──────────────────────────────────────────────────────── */
+    .card {
+      border: 2px solid var(--brand-teal);
+      background: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      overflow: hidden;
+    }
+    .card h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      color: var(--brand-teal);
+      font-size: 2rem;
+      text-transform: uppercase;
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--brand-teal);
+    }
+    .card img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+    }
+    .card .next-show {
+      padding: 0.75rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .card .next-show h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+      color: var(--text-light);
+    }
+    .card .next-show p {
+      font-size: 0.85rem;
+      line-height: 1.2;
+    }
+
+    /* ─── MOBILE OVERRIDES (<=600px) ─────────────────────────────────────── */
+    @media (max-width: 600px) {
+      /* Header tweaks */
+      header {
+        padding: 0.4rem 0.6rem;
+      }
+      header h1 {
+        font-size: 1.6rem;
+        white-space: nowrap;
+      }
+      header img.logo {
+        width: 45px;
+      }
+
+      /* Grid forced 3 columns */
+      #artists-container {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.5rem;
+        padding: 0.5rem;
+      }
+
+      /* Card title reduced */
+      .card h2 {
+        font-size: 0.8rem;
+        padding: 0.3rem;
+      }
+      /* Next-show padding and text sizes */
+      .card .next-show {
+        padding: 0.4rem;
+      }
+      .card .next-show h3 {
+        font-size: 0.8rem;
+      }
+      .card .next-show p {
+        font-size: 0.8rem;
+      }
+    }
+
+    /* ─── ERROR MESSAGE ────────────────────────────────────────────────────── */
+    .error {
+      text-align: center;
+      color: #f55;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Cutters Choice DJs</h1>
+    <img src="https://i.imgur.com/72gdPJY.png" alt="Logo" class="logo">
+  </header>
+
+  <main>
+    <div id="artists-container"></div>
+    <p id="error" class="error" style="display:none;"></p>
+  </main>
+
+  <script>
+    const BASE_URL = 'https://api.radiocult.fm/api';
+    const STATION_ID = 'cutters-choice-radio';
+    const API_KEY = 'pk_0b8abc6f834b444f949f727e88a728e0';
+
+    function normalizeTags(tags) {
+      if (Array.isArray(tags)) return tags.map(t => String(t).toLowerCase());
+      if (typeof tags === 'string') return tags.split(',').map(t => t.trim().toLowerCase());
+      return [];
+    }
+
+    async function loadArtists() {
+      try {
+        const res = await fetch(`${BASE_URL}/station/${STATION_ID}/artists`, {
+          headers: { 'x-api-key': API_KEY }
+        });
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+
+        const { artists = [] } = await res.json();
+        const visible = artists.filter(a => normalizeTags(a.tags).includes('website'));
+
+        const container = document.getElementById('artists-container');
+        if (!visible.length) {
+          const err = document.getElementById('error');
+          err.textContent = 'No DJs found with the "website" tag.';
+          err.style.display = 'block';
+          return;
+        }
+
+        container.innerHTML = '';
+        for (let artist of visible) {
+          const card = document.createElement('a');
+          card.className = 'card';
+          card.href = `index_IND_DJ.html?id=${artist.id}`;
+
+          const title = document.createElement('h2');
+          title.textContent = artist.name;
+          card.append(title);
+
+          const img = document.createElement('img');
+          img.src = artist.logo?.['512x512'] || artist.logo?.default || '';
+          img.alt = artist.name;
+          card.append(img);
+
+          const show = document.createElement('div');
+          show.className = 'next-show';
+          show.innerHTML = `<h3>Next Scheduled Show</h3><p id="next-${artist.id}">Loading…</p>`;
+          card.append(show);
+
+          container.append(card);
+          loadNextShow(artist.id);
+        }
+      } catch (err) {
+        console.error('Error loading artists:', err);
+        const e = document.getElementById('error');
+        e.textContent = 'Error loading DJs: ' + err.message;
+        e.style.display = 'block';
+      }
+    }
+
+    async function loadNextShow(artistId) {
+      try {
+        const now = new Date().toISOString();
+        const nextYear = new Date(Date.now() + 365*24*60*60*1000).toISOString();
+        const res = await fetch(
+          `${BASE_URL}/station/${STATION_ID}/artists/${artistId}/schedule?startDate=${now}&endDate=${nextYear}`,
+          { headers: { 'x-api-key': API_KEY } }
+        );
+        if (!res.ok) throw new Error(`Schedule API returned ${res.status}`);
+
+        const { schedules = [] } = await res.json();
+        const el = document.getElementById(`next-${artistId}`);
+        if (el) {
+          if (schedules.length) {
+            const dt = new Date(schedules[0].startDateUtc);
+            el.textContent = dt.toLocaleString('en-NZ', {
+              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+          } else {
+            el.textContent = 'TBA';
+          }
+        }
+      } catch (err) {
+        console.error(`Error loading schedule for ${artistId}:`, err);
+        const el = document.getElementById(`next-${artistId}`);
+        if (el) el.textContent = 'Error';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadArtists);
+  </script>
+</body>
+</html>
